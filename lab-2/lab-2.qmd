@@ -1,0 +1,321 @@
+---
+title: "Lab 2 - Data wrangling"
+author: "Edmond Niu"
+format: pdf
+editor: visual
+---
+
+```{r}
+#| label: load-packages
+#| message: false
+
+library(tidyverse)
+```
+
+# Part 2
+
+## Question 1
+
+IL has the highest number of counties, at a count of 102. WI has the lowest number of counties, at a count of 72.
+
+```{r}
+#| label: count-counties
+
+midwest |>
+  count(state)
+```
+
+{{< pagebreak >}}
+
+## Question 2
+
+Only 3 counties are located in all 5 states in this dataset (Crawford, Jackson, and Monroe).
+
+```{r}
+#| label: count-county-names
+
+midwest |>
+  count(county) |>
+  filter(n==5)
+```
+
+{{< pagebreak >}}
+
+## Question 3
+
+a\.
+
+```{r}
+#| label: high-pop-density
+
+midwest |> 
+  filter(popdensity > 25000) |>
+  select(county, state, popdensity, poptotal, area) |>
+  arrange(desc(popdensity))
+```
+
+b\.
+
+```{r}
+#| label: max-pop-density
+
+midwest |> 
+  filter(popdensity == max(popdensity)) |>
+  select(county, state, popdensity, poptotal, area)
+```
+
+{{< pagebreak >}}
+
+## Question 4
+
+The distribution of population density of counties is unimodal and extremely right-skewed. A typical Midwestern county has population density of 1156 people per unit area. The middle 50% of the counties have population densities between 622 to 2330 people per unit area.
+
+```{r}
+#| label: distribution-pop-density
+
+midwest |>
+  summarize(
+    median = median(popdensity),
+    q1 = quantile(popdensity, 0.25),
+    q3 = quantile(popdensity, 0.75)
+  )
+
+```
+
+{{< pagebreak >}}
+
+## Question 5
+
+Proportion of counties in urban areas in each state:
+
+IL: 0.27
+
+IN: 0.40
+
+MI: 0.30
+
+OH: 0.45
+
+WI: 0.28
+
+```{r}
+#| label: proportions-inmetro
+
+midwest |>
+  mutate(metro = if_else(inmetro == 1, "Yes", "No")) |>
+  group_by(state, metro) |>
+  summarise(count = n()) |>
+  mutate(proportion_inmetro = count / sum(count)) |>
+  filter(metro == "Yes")
+```
+
+{{< pagebreak >}}
+
+## Question 6
+
+a\.
+
+```{r}
+#| label: outlier-upper-left
+
+midwest |>
+  filter(percbelowpoverty == max(percbelowpoverty)) |>
+  select(county,state,percbelowpoverty, percollege)
+```
+
+b\.
+
+```{r}
+#| label: outlier-lower-right
+
+midwest |>
+  filter(percollege > 40) |>
+  select(county,state,percbelowpoverty, percollege)
+```
+
+c\.
+
+```{r}
+#| label: outliers
+
+midwest |>
+  filter(percollege > 40 | percbelowpoverty == max(percbelowpoverty)) |>
+  select(county,state,percbelowpoverty, percollege)
+```
+
+d\.
+
+```{r}
+#| label: potential-outlier
+
+
+midwest <- midwest |>
+  mutate(potential_outlier = if_else(percollege > 40 | 
+  percbelowpoverty == max(percbelowpoverty), "Yes", "No"))
+
+midwest |>
+  select(county, state, percbelowpoverty, percollege, potential_outlier) |>
+  arrange(potential_outlier)
+
+```
+
+e\.
+
+```{r}
+#| label: scatterplot-potentialOutliers
+
+ggplot(midwest, aes(x=percollege, y=percbelowpoverty, color = potential_outlier, 
+      shape=state)) +
+  geom_point() +
+  labs(
+    x = "percentage of people with a college degree",
+    y = "percentage of people below poverty",
+    title = "% people with college degree vs people below poverty by state"
+  )
+
+
+```
+
+{{< pagebreak >}}
+
+## Question 7
+
+a\.
+
+```{r}
+#| label: total-pop-per-state
+
+state_population <- midwest |>
+  group_by(state) |>
+  summarize(total_population = sum(poptotal)) 
+
+state_population |>
+  arrange(desc(total_population))
+```
+
+b\.
+
+```{r}
+#| label: proportion-totalPopulation
+
+state_population |>
+  mutate(propOf_totalPopulation = total_population / sum(total_population)) |>
+  arrange(desc(propOf_totalPopulation))
+
+```
+
+c\. IL is the most populous Midwestern state with 27.2% of the Midwest population living there. WI is the least populous Midwestern state with 11.6% of the Midwest population living there.
+
+{{< pagebreak >}}
+
+## Question 8
+
+The state that has the lowest average percentage below poverty across its counties is IN (Indiana). The state that has the highest average percentage below poverty across its countries is MI (Michigan).
+
+```{r}
+#| label: average-percentageBelowPoverty-per-state
+
+
+state_poverty <- midwest |>
+  group_by(state) |>
+  summarize(mean_percbelowpoverty = mean(percbelowpoverty)) |>
+  select(state, mean_percbelowpoverty)
+
+state_poverty |>
+  arrange(mean_percbelowpoverty)
+```
+
+{{< pagebreak >}}
+
+# Part 2
+
+## Question 9
+
+```{r}
+#| label: foods-data-frame
+
+df <- tibble(
+  var_1 = c(10, 20, 30, 40, 50),
+  var_2 = c("Pizza", "Burger", "Pizza", "Pizza", "Burger"),
+  var_3 = c("Apple", "Apple", "Pear", "Pear", "Banana")
+)
+
+df
+```
+
+a\. The code chunk below arranges the values in column var_2 by alphabetical order. Arrange() orders rows using column values in either ascending or descending fashion.
+
+```{r}
+#| label: arrange
+
+
+df |>
+  arrange(var_2)
+```
+
+{{< pagebreak >}}
+
+b\. The following code groups the data by value in var_2. The group_by() function groups the data by one or more variables (in this instance, var_2). It's different from arrange in part a in that arrange(var_2) groups the data by column var_2 but group_by(var_2) groups the data by column var_3 value.
+
+```{r}
+#| label: group-by
+
+df |>
+  group_by(var_2)
+```
+
+c\. This code chunk groups the data by value in var_2 into two groups (Burger and Pizza). It then takes the corresponding var_1 value and takes the mean of all the var_1 values from all entries for Burgers and all entries for Pizza and computes two means (for the two groups in var_2).
+
+```{r}
+#| label: group-by-summarize-onevar
+
+
+df |>
+  group_by(var_2) |>
+  summarize(mean_var_1 = mean(var_1))
+```
+
+{{< pagebreak >}}
+
+d\. This code chunk groups the data by value in var_2 AND var_3 into 4 groups (all combinations of var_2 values with var_3 values). It then takes the corresponding var_1 value(s) from all entries of each combination/grouping of var_2 and var_3 values, and computes the mean of the var_1 value(s).
+
+```{r}
+#| label: group-by-summarize-twovars
+
+df |>
+  group_by(var_2, var_3) |>
+  summarize(mean_var_1 = mean(var_1))
+```
+
+e\. This code chunk does the exact same thing as part d, but the .groups = "drop" drops all levels of grouping. So this code chunk groups the data by value in var_2 AND var_3 into 4 groups (all combinations of var_2 values with var_3 values). It then takes the corresponding var_1 value(s) from all entries of each combination/grouping of var_2 and var_3 values, and computes the mean of the var_1 value(s), BUT at the end, the groupings of var_2, var_3 are dropped.
+
+```{r}
+#| label: group-by-summarize-mean-dropGroups
+
+df |>
+  group_by(var_2, var_3) |>
+  summarize(mean_var_1 = mean(var_1), .groups = "drop")
+```
+
+{{< pagebreak >}}
+
+f\. The first pipeline does exactly what part e is doing. It groups the data by var_2 and var_3 and calculates var_1 means for each grouping made. It then gets rid of the grouping. However, the second pipeline is different. It also groups by var_2 and var_3 but it mutates instead of summarizes. What this means is that each group is NOT summarized down to one row (hence the two rows mean_var_1 for Pizza and Pear). This is why there are 5 rows instead of 4 for the second pipeline. All mutate is doing is changing the values of mean_var_1 to reflect every single row created by the group_by(var_2, var_3).
+
+```{r}
+#| label: compare-dropgroups-nodropgroups
+
+df |>
+  group_by(var_2, var_3) |>
+  summarize(mean_var_1 = mean(var_1), .groups = "drop")
+
+df |>
+  group_by(var_2, var_3) |>
+  mutate(mean_var_1 = mean(var_1))
+
+```
+
+{{< pagebreak >}}
+
+## Question 10
+
+No answer needed here! Just select questions and pages to indicate where your responses are located when you upload your lab PDF to Gradescope and you'll get full points on this question.

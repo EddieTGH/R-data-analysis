@@ -1,0 +1,258 @@
+---
+title: "Lab 3 - Data tidying and joining"
+author: "Edmond Niu"
+format: pdf
+editor: visual
+---
+
+```{r}
+#| label: load-packages
+#| message: false
+
+library(tidyverse)
+```
+
+# Part 1
+
+```{r}
+#| label: load-country-inflation
+#| message: false
+
+country_inflation <- read_csv("data/country-inflation.csv")
+```
+
+## Question 1
+
+a\. Country_inflation has 44 rows and each row represents a different country. There are 30 columns and each column represents a different year from 1993-2021 (inclusive).
+
+```{r}
+#| label: glimpse-country-inflation
+
+glimpse(country_inflation)
+```
+
+b\.
+
+```{r}
+#| label: countries
+
+pull(country_inflation, var="country")
+```
+
+{{< pagebreak >}}
+
+## Question 2
+
+Argentina, Turkiye, and Brazil had the top 3 highest inflation rates in 2021. US inflation rate (2021): 4.69. These inflation rates for these countries are substantially larger than the US inflation rate (by magnitudes greater). This showcases that the US inflation rate in 2021 was not considered a high inflation rate compared to other countries in that year.
+
+```{r}
+#| label: inflation-compare
+
+country_inflation |>
+  arrange(desc(`2021`)) |>
+  select(country, `2021`) |>
+  slice(0:3)
+```
+
+{{< pagebreak >}}
+
+## Question 3
+
+New Zealand has the largest inflation change over this time period. Inflation increased between 1993 and 2021 in this country by approximately 3-fold.
+
+```{r}
+#| label: inf-ratio
+
+country_inflation |>
+  mutate(inf_ratio = `2021` / `1993`) |>
+  arrange(desc(inf_ratio)) |> 
+  select(country, inf_ratio)
+```
+
+{{< pagebreak >}}
+
+## Question 4
+
+This pivoted data frame has 1276 rows and 3 columns.
+
+```{r}
+#| label: country-inflation-longer
+
+pivoted_CI <- country_inflation |>
+  pivot_longer(
+    cols = !country, names_to = "year", values_to = "annual_inflation", 
+    names_transform = as.numeric)
+
+pivoted_CI
+```
+
+{{< pagebreak >}}
+
+## Question 5
+
+a\. Brazil in 1994 had the highest inflation rate of 2075.888.
+
+```{r}
+#| label: highest-inflation
+
+pivoted_CI |>
+  filter(annual_inflation == max(annual_inflation, na.rm = TRUE))
+```
+
+b\. Ireland in 2009 had the lowest inflation rate of -4.478.
+
+```{r}
+#| label: lowest-inflation
+
+pivoted_CI |>
+  filter(annual_inflation == min(annual_inflation, na.rm = TRUE))
+```
+
+c\. Brazil in 1994 had the highest inflation rate of 2075.888, while Ireland in 2009 had the lowest inflation rate of -4.478.
+
+```{r}
+#| label: highest-lowest-inflation
+
+pivoted_CI |>
+  filter(annual_inflation == max(annual_inflation, na.rm = TRUE) | 
+         annual_inflation == min(annual_inflation, na.rm = TRUE))
+```
+
+{{< pagebreak >}}
+
+## Question 6
+
+a\. I chose these countries because I am a US citizen, and I want to visit Japan (I love sushi) and Italy (I love some good pasta).
+
+```{r}
+#| label: countries-of-interest
+
+
+countries_of_interest <- c("Italy", "United States", "Japan")
+```
+
+b\.
+
+```{r}
+#| label: df-countries-of-interest
+
+pivoted_COF <- pivoted_CI |>
+  filter(country == "Italy" | 
+         country == "United States" | 
+         country == "Japan")
+
+distinct(pivoted_COF, country)
+```
+
+{{< pagebreak >}}
+
+## Question 7
+
+Overall, United States inflation rate (blue) is similar to Italy's inflation rate (red) throughout 1993-2021. However, both US and Italy's inflation rates are typically higher than Japan's inflation rate (green) for most of the years between 1993-2014. In 2008, there was a huge drop in inflation rates for all 3 countries, likely due to the Great Recession. US and Italy's inflation rates recovered faster than Japan's inflation rate recovery, which happened on a much slower scale. In the recent year of 2020-2021, Italy and United States' inflation rates surged upward, while Japan does not have a value for 2021. Overall, looking at just starting and ending years (2021 vs 1993), Italy and Japan's inflation rates decreased but the US's inflation rate increased. The US (in 2021) has the highest inflation rate of 4.8% compared to Italy at 2%, and Japan is unknown (but likely to be around 2% or lower).
+
+```         
+```
+
+```{r}
+#| label: inflation-vs-year
+
+
+ggplot(data=pivoted_COF, aes(x=year, y=annual_inflation, 
+                             color=country, shape=country)) +
+  geom_point() +
+  geom_line() +
+  labs(
+    title = "Annual Inflation vs Year for Italy, Japan, and United States",
+    x = "Year",
+    y = "Annual Inflation"
+  ) + theme_grey()
+  
+
+```
+
+{{< pagebreak >}}
+
+# **Part 2**
+
+```{r}
+#| label: load-us-data
+#| message: false
+
+us_inflation <- read_csv("data/us-inflation.csv")
+cpi_divisions <- read_csv("data/cpi-divisions.csv")
+```
+
+## Question 8
+
+a\. The us_inflation dataset has 132 rows and 4 columns. The columns include country, cpi_division_id, year, and annual_inflation. This dataset represents all different entries of annual_inflation based on country, year, and which cpi_division_id this annual_inflation value is representing.
+
+b\. The cpi_divisions dataset has 12 rows and 2 columns. The columns include id and description. This dataset is mapping all 12 ids (which are represented by variable: cpi_division_id in the us_inflation dataset) to one of the 12 different categories that the CPI index is broken down into (food, clothing, etc).
+
+c\. The joined_USInflation_CPI dataset has 132 rows and 5 columns. The names of the columns are: country, cpi_division_id, year, annual_inflation, and description. This dataset has combined both the us_inflation dataset and cpi_divisions dataset into one dataset, with a mapping of cpi_division_id from us_inflation to id from cpi_divisions. You can think of this joined dataset to be the us_inflation dataset with one additional column from the cpi_divisions dataset, which is (description). The other column in cpi_divisions (id) is not included in this joined dataset because that is the column value that is used for mapping: it is mapped to a column value in us_inflation (cpi_division_id) to create the mapping for the join.
+
+```{r}
+#| label = join-us-inflation-and-cpi-divisions
+
+joined_USInflation_CPI <- us_inflation |>
+  full_join(cpi_divisions, join_by(cpi_division_id==id))
+
+joined_USInflation_CPI
+```
+
+{{< pagebreak >}}
+
+## Question 9
+
+a\. I chose these divisions because they are most relevant to my everyday life. I buy food and non-alcoholic beverages everyday, I buy clothing and footwear everyday, and I often eat at restaurants and stay at hotels a few times a month.
+
+```{r}
+#| label: divisions-of-interest
+
+divisions_of_interest <- c("Food and non-Alcoholic beverages", 
+                           "Clothing and footwear", 
+                           "Restaurants and hotels")
+```
+
+```{r}
+#| label: data-divisions-of-interest
+
+DOI_joined_USInflation_CPI <- joined_USInflation_CPI |>
+  filter(description == "Food and non-Alcoholic beverages" |
+         description == "Clothing and footwear" | 
+         description == "Restaurants and hotels")
+
+distinct(DOI_joined_USInflation_CPI, country)
+```
+
+{{< pagebreak >}}
+
+## Question 10
+
+When it comes to restaurants and hotel, this CPI division is the most stable. The inflation rates associated with this division typically have been the highest (when compared to clothing/footwear and food/non-alcoholic beverages. Clothing/footwear and food/non-alcoholic beverages seem to be tied for most years except for after 2019, where clothing and footwear inflation rates dramatically decreased for one year into the negatives and then rebounded to around 2.5%. Overall, year 2020 was when both clothing/footwear and restaurant/hotels inflation rates took a considerable dip. Overall, restaurant and hotels inflation rate is the most stable, with food and non-alcoholic beverages behind the second most stable, and clothing/footwear being the most volatile. As of 2021, the inflation rate of clothing and footwear is the lowest at 2.5%, followed by food/non-alcoholic beverages at \~3.75%, and restaurant and hotels inflation rate is the highest at 5.0%.
+
+```{r}
+#| label: color-palette
+
+my_palette2 <- c('cadetblue3', 'aquamarine3', 'deeppink')
+```
+
+```{r}
+#| label: annual-inflation-vs-year
+
+ggplot(data = DOI_joined_USInflation_CPI, aes(x = year, y = annual_inflation,
+      shape = description, color = description)) +
+  geom_point() +
+  geom_line() +
+  labs(
+    title = "Annual Inflation Per Year By CPI Division",
+    x = "Year",
+    y = "Annual Inflation",
+    color = "CPI Division",
+    shape = "CPI Division"
+    ) + 
+  scale_color_manual(values = my_palette2) +
+  theme(
+        legend.position = "bottom", 
+        legend.direction = "vertical"
+        )
+```

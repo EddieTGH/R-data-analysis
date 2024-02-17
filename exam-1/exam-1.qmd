@@ -1,0 +1,207 @@
+---
+title: "Exam 1 - Take home"
+subtitle: "STA 199 - Spring 2024"
+author: "Edmond Niu"
+format: pdf
+---
+
+------------------------------------------------------------------------
+
+> I hereby state that I have not communicated with or gained information in any way from my classmates or any other humans during this exam, and that all work is my own.
+
+Initials: EN
+
+------------------------------------------------------------------------
+
+```{r}
+#| label: load-packages
+#| message: false
+
+library(tidyverse)
+library(palmerpenguins)
+library(knitr)
+```
+
+{{< pagebreak >}}
+
+# Déjà vu
+
+## Question 1
+
+An explanatory factor for this atypical bimodal distribution of flipper lengths can be attributed to species. As can be seen by this visualization, where the original flipper length histogram has been split into individual histograms based on species, it can be shown that each species is contributing to a different portion of the total histogram. The distribution of flipper lengths of Adelie penguins is unimodal and normally distributed, with its mode at around 190 mm, while the distribution for Gentoo penguins' flipper lengths is also a unimodal, normal distribution with its mode at around 210mm. This creates the bimodal structure of the data when looking at these two species combined. The Chinstrap penguin fills in the gap between these two modes (190 and 210mm), with its little mini mode at 200mm and its data normally distributed around it, which ultimately does not change the bimodal structure of the data because there aren't enough data points for this species of penguin. This results in the bimodal distribution when looking at all 3 species combined.
+
+```{r}
+#| label: investigate-variables
+
+ggplot(penguins, aes(x = flipper_length_mm)) + 
+  geom_histogram(bins = 15) +
+  facet_wrap(~species)
+```
+
+{{< pagebreak >}}
+
+## Question 2
+
+```{r}
+#| label: load-tv-data
+#| message: false
+
+tv <- read_csv("data/tv.csv")
+```
+
+a\.
+
+```{r}
+#| label: make-csi-data
+
+csi <- tv |>
+  filter(grepl("CSI", title))
+
+#Documentation for grepl: 
+#https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/grep
+
+csi |>
+  slice(1:10)
+```
+
+b\. CSI: Crime Scene (15); CSI: Miami (10); CSI: NY (9); CSI: Cyber (2)
+
+```{r}
+#| label: add-seasons
+
+csi |>
+  count(title) |>
+  arrange(desc(n))
+```
+
+c\. Across the various CSI titles, this is the median average rating across all seasons from highest to lowest: Crime Scene Investigation, NY, Miami, and Cyber. The IQR across various CSI titles from largest to smallest: Crime Scene Investigation, Cyber/Miami (too similar to tell), and NY. NY also is the only CSI title to have two outliers in its average rating across all seasons. Overall (excluding outliers), this showcases that Crime Scene Investigation had the highest ratings but had the greatest variability, while Cyber had the lowest ratings, and NY had the lowest variability. All CSI titles show minimal skewed-ness.
+
+```{r}
+#| label: average-rating-distributions
+
+ggplot(csi, aes(x = av_rating)) +
+  geom_boxplot() + 
+  facet_wrap(~title)
+```
+
+{{< pagebreak >}}
+
+# Credit cards
+
+```{r}
+#| label: load-data
+#| message: false
+
+credit <- read_csv("data/credit.csv")
+```
+
+## Question 3
+
+The `credit` dataset has 347 rows and 5 columns. Each row represents a credit card customer. The primary variable of interest in the dataset is `balance`, credit card balances in US Dollars. The shape of the distribution of credit card balances is unimodal and right-skewed. The typical credit card balance is 467. 50% of the customers in the dataset have credit card balances between 68.5 and 865.5.
+
+```{r}
+#| label: credit-rows-cols
+
+glimpse(credit)
+```
+
+```{r}
+#| label: credit-balances-distribution
+
+ggplot(credit, aes(x = balance)) +
+  geom_histogram()
+```
+
+```{r}
+#| label: credit-typical-balance
+
+credit |>
+  summarize(
+    median = median(balance),
+    q1 = quantile(balance, 0.25),
+    q3 = quantile(balance, 0.75)
+  )
+
+#ggplot(credit, aes(x = balance)) +
+#  geom_boxplot()
+```
+
+{{< pagebreak >}}
+
+## Question 4
+
+The relationship between credit card balance and income is weak, linear, and positive. As income increases, the credit card balance tends to increase as well. However, the points are all over the place and the data do not fit the line of best fits nicely (hence, weak).
+
+When it comes to differences by student status, the relationship for balance vs income for students is less positive (flatter line) than for non-students. In other words, the balance of students' credit cards do not increase as much as the balance of non-students' credit cards do, per dollar increase in income. That is to say, for every dollar that a non-student earns, they tend to have a higher credit card balance than a student would if a student earned that same dollar.
+
+```{r}
+#| label: credit-balance-vs-income
+
+ggplot(credit, aes(x = income, y = balance, color = student_status)) +
+  geom_point() +
+  facet_wrap(~student_status) +
+  geom_smooth(method = "lm", se = FALSE) + 
+  labs(
+    title = "Credit Card Balances vs Income for Students & Non-students",
+    x = "Income in USD",
+    y = "Credit Card Balance in USD",
+    color = "Student Status"
+  )
+```
+
+{{< pagebreak >}}
+
+## Question 5
+
+The relationship between income and credit utilization is different from the relationship between income and credit card balance for students because the relationship is now weak, linear, and negative (instead of positive).
+
+On the other hand, the relationship for non-students is still weak, linear, and positive, but if anything, the correlation is even weaker (the points seem even more random and less linear) and even less positive (line is closer to horizontal).
+
+```{r}
+#| label: credit-utilization
+
+credit_plus <- credit |>
+  mutate(credit_util = balance / limit)
+
+ggplot(credit_plus, aes(x = income, y = credit_util, color = student_status)) +
+  geom_point() +
+  facet_wrap(~student_status) +
+  geom_smooth(method = "lm", se = FALSE) + 
+  labs(
+    title = "Credit Utilization vs Income for Students and Non-students",
+    x = "Income in USD",
+    y = "Credit Utilization",
+    color = "Student Status"
+  )
+```
+
+{{< pagebreak >}}
+
+## Question 6
+
+a\. The group that had the highest credit card balance were students that were not married.
+
+```{r}
+#| label: mean-credit-card
+
+credit_summary_unclean <- credit |>
+  group_by(student_status, marriage_status) |>
+  summarise(
+    mean_credit_card_balance = mean(balance)
+  )
+
+credit_summary_unclean
+```
+
+b\.
+
+```{r}
+#| label: pivot-mean
+
+credit_summary <- credit_summary_unclean |>
+  pivot_wider(names_from = marriage_status, values_from = mean_credit_card_balance)
+
+kable(credit_summary, digits = 0, col.names = c("", "Married", "Not married"))
+
+#pivot wider documentation: https://tidyr.tidyverse.org/reference/pivot_wider.html
+```
