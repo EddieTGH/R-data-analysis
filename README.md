@@ -1,4 +1,4 @@
-# Personal Projects in R
+# Data Engineering Projects in R
 ## Data Visualization, Wrangling, and Tidying
 This repository contains 3 projects/labs that dive deep into data manipulation, analysis, and visualization using R. Click into each project/lab and open the pdf files to see what was done.
 
